@@ -1377,23 +1377,17 @@ func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
 		return nil, err
 	}
 	settings, err := p.parseSettingsExprList(p.Pos())
+	createDictionary.Settings = settings
 
 	// parse COMMENT
 	if err := p.consumeKeyword(KeywordComment); err != nil {
 		return nil, err
 	}
 	comment, err := p.parseString(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.Comment = comment
 
-	return &CreateDictionary{
-		CreatePos:   pos,
-		IfNotExists: ifNotExists,
-		Name:        dictionaryName,
-		OnCluster:   onCluster,
-		TableSchema: tableSchema,
-		PrimaryKey:  primaryKeyExpr,
-		Source:      source,
-		Lifetime:    lifetime,
-		Settings:    settings,
-		Comment:     comment,
-	}, nil
+	return createDictionary, nil
 }
