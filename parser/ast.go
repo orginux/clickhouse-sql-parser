@@ -4016,3 +4016,73 @@ func (g *GrantPrivilegeExpr) String(level int) string {
 
 	return builder.String()
 }
+
+// CREATE DICTIONARY id_value_dictionary
+// (
+//     `id` UInt64,
+//     `value` String
+// )
+// PRIMARY KEY id
+// SOURCE(CLICKHOUSE(TABLE 'source_table'))
+// LIFETIME(MIN 0 MAX 1000)
+// LAYOUT(FLAT())
+
+type CreateDictionary struct {
+	CreatePos    Pos // position of CREATE keyword
+	StatementEnd Pos
+	IfNotExists  bool // true if 'IF NOT EXISTS' is specified
+	Name         *Ident
+	OnCluster    *OnClusterExpr   // true if `ON CLUSTER` is specified
+	TableSchema  *TableSchemaExpr // regular table schema
+	PrimaryKey   *PrimaryKeyExpr
+	Source       *StringLiteral
+	Lifetime     *NumberLiteral
+	Settings     *SettingsExprList
+	Comment      *StringLiteral
+}
+
+func (c *CreateDictionary) Pos() Pos {
+	return c.CreatePos
+}
+
+func (c *CreateDictionary) End() Pos {
+	return c.StatementEnd
+}
+
+func (c *CreateDictionary) Type() string {
+	return "CREATE DICTIONARY"
+}
+
+func (c *CreateDictionary) String(level int) string {
+	var builder strings.Builder
+	builder.WriteString("CREATE")
+	// TODO: OR REPLACE
+	builder.WriteString(" DICTIONARY ")
+	if c.IfNotExists {
+		builder.WriteString("IF NOT EXISTS ")
+	}
+	builder.WriteString(c.Name.String(level))
+	if c.OnCluster != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString(c.OnCluster.String(level))
+	}
+	if c.TableSchema != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString(c.TableSchema.String(level))
+	}
+	if c.PrimaryKey != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString(c.PrimaryKey.String(level))
+	}
+	if c.Source != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString("SOURCE ")
+		builder.WriteString(c.Source.String(level))
+	}
+	if c.Lifetime != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString("LIFETIME ")
+		builder.WriteString(c.Lifetime.String(level))
+	}
+	return builder.String()
+}

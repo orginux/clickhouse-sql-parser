@@ -26,6 +26,7 @@ func (p *Parser) parseDDL(pos Pos) (DDL, error) {
 		case p.matchKeyword(KeywordRole):
 			return p.parseCreateRole(pos)
 		case p.matchKeyword(KeywordDictionary):
+			return p.parseCreateDictionary(pos)
 		case p.matchKeyword(KeywordFunction):
 		case p.matchKeyword(KeywordRow):
 		case p.matchKeyword(KeywordSettings):
@@ -1306,5 +1307,93 @@ func (p *Parser) parseCreateFunction(pos Pos) (*CreateFunction, error) {
 		OnCluster:    onCluster,
 		Params:       params,
 		Expr:         expr,
+	}, nil
+}
+
+func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
+	// parse CREATE
+	createDictionary := &CreateDictionary{CreatePos: pos}
+	if err := p.consumeKeyword(KeywordDictionary); err != nil {
+		return nil, err
+	}
+
+	// try to parse IF NOT EXISTS
+	ifNotExists, err := p.tryParseIfNotExists()
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.IfNotExists = ifNotExists
+
+	// parse dictionary name
+	dictionaryName, err := p.parseIdent()
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.Name = dictionaryName
+
+	// try to parse ON CLUSTER
+	onCluster, err := p.tryParseOnCluster(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.OnCluster = onCluster
+
+	// parse table schema
+	tableSchema, err := p.parseTableSchemaExpr(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.TableSchema = tableSchema
+
+	// parse PRIMARY KEY
+	primaryKeyExpr, err := p.tryParsePrimaryKeyExpr(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.PrimaryKey = primaryKeyExpr
+
+	// parse SOURCE
+	if err := p.consumeKeyword(KeywordSource); err != nil {
+		return nil, err
+	}
+	source, err := p.parseString(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.Source = source
+
+	// parse LIFETIME
+	if err := p.consumeKeyword(KeywordLifetime); err != nil {
+		return nil, err
+	}
+	lifetime, err := p.parseNumber(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	createDictionary.Lifetime = lifetime
+
+	// parse SETTINGS
+	if err := p.consumeKeyword(KeywordSettings); err != nil {
+		return nil, err
+	}
+	settings, err := p.parseSettingsExprList(p.Pos())
+
+	// parse COMMENT
+	if err := p.consumeKeyword(KeywordComment); err != nil {
+		return nil, err
+	}
+	comment, err := p.parseString(p.Pos())
+
+	return &CreateDictionary{
+		CreatePos:   pos,
+		IfNotExists: ifNotExists,
+		Name:        dictionaryName,
+		OnCluster:   onCluster,
+		TableSchema: tableSchema,
+		PrimaryKey:  primaryKeyExpr,
+		Source:      source,
+		Lifetime:    lifetime,
+		Settings:    settings,
+		Comment:     comment,
 	}, nil
 }
