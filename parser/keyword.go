@@ -26,6 +26,7 @@ const (
 	KeywordCast         = "CAST"
 	KeywordCheck        = "CHECK"
 	KeywordClear        = "CLEAR"
+	KeywordClickhouse   = "CLICKHOUSE"
 	KeywordCluster      = "CLUSTER"
 	KeywordCodec        = "CODEC"
 	KeywordCollate      = "COLLATE"
@@ -73,6 +74,7 @@ const (
 	KeywordFileSystem   = "FILESYSTEM"
 	KeywordFinal        = "FINAL"
 	KeywordFirst        = "FIRST"
+	KeywordFile         = "FILE"
 	KeywordFlush        = "FLUSH"
 	KeywordFollowing    = "FOLLOWING"
 	KeywordFor          = "FOR"
@@ -89,6 +91,7 @@ const (
 	KeywordHaving       = "HAVING"
 	KeywordHierarchical = "HIERARCHICAL"
 	KeywordHour         = "HOUR"
+	KeywordHttp         = "HTTP"
 	KeywordId           = "ID"
 	KeywordIf           = "IF"
 	KeywordIlike        = "ILIKE"
@@ -124,14 +127,17 @@ const (
 	KeywordMinute       = "MINUTE"
 	KeywordModify       = "MODIFY"
 	KeywordMonth        = "MONTH"
+	KeywordMongodb      = "MONGODB"
 	KeywordMove         = "MOVE"
 	KeywordMoves        = "MOVES"
 	KeywordMutation     = "MUTATION"
+	KeywordMysql        = "MYSQL"
 	KeywordNan_sql      = "NAN_SQL"
 	KeywordNo           = "NO"
 	KeywordNot          = "NOT"
 	KeywordNull         = "NULL"
 	KeywordNulls        = "NULLS"
+	KeywordOdbc         = "ODBC"
 	KeywordOffset       = "OFFSET"
 	KeywordOn           = "ON"
 	KeywordOptimize     = "OPTIMIZE"
@@ -145,6 +151,7 @@ const (
 	KeywordPipeline     = "PIPELINE"
 	KeywordPolicy       = "POLICY"
 	KeywordPopulate     = "POPULATE"
+	KeywordPostgresql   = "POSTGRESQL"
 	KeywordPreceding    = "PRECEDING"
 	KeywordPrewhere     = "PREWHERE"
 	KeywordPrimary      = "PRIMARY"
@@ -154,6 +161,7 @@ const (
 	KeywordQueues       = "QUEUES"
 	KeywordQuota        = "QUOTA"
 	KeywordRange        = "RANGE"
+	KeywordRedis        = "REDIS"
 	KeywordRefresh      = "REFRESH"
 	KeywordReload       = "RELOAD"
 	KeywordRemove       = "REMOVE"
@@ -246,6 +254,7 @@ var keywords = NewSet(
 	KeywordCast,
 	KeywordCheck,
 	KeywordClear,
+	KeywordClickhouse,
 	KeywordCluster,
 	KeywordCodec,
 	KeywordCollate,
@@ -293,6 +302,7 @@ var keywords = NewSet(
 	KeywordFileSystem,
 	KeywordFinal,
 	KeywordFirst,
+	KeywordFile,
 	KeywordFlush,
 	KeywordFollowing,
 	KeywordFor,
@@ -309,6 +319,7 @@ var keywords = NewSet(
 	KeywordHaving,
 	KeywordHierarchical,
 	KeywordHour,
+	KeywordHttp,
 	KeywordId,
 	KeywordIf,
 	KeywordIlike,
@@ -344,14 +355,17 @@ var keywords = NewSet(
 	KeywordMinute,
 	KeywordModify,
 	KeywordMonth,
+	KeywordMongodb,
 	KeywordMove,
 	KeywordMoves,
 	KeywordMutation,
+	KeywordMysql,
 	KeywordNan_sql,
 	KeywordNo,
 	KeywordNot,
 	KeywordNull,
 	KeywordNulls,
+	KeywordOdbc,
 	KeywordOffset,
 	KeywordOn,
 	KeywordOptimize,
@@ -365,6 +379,7 @@ var keywords = NewSet(
 	KeywordPipeline,
 	KeywordPolicy,
 	KeywordPopulate,
+	KeywordPostgresql,
 	KeywordPreceding,
 	KeywordPrewhere,
 	KeywordPrimary,
@@ -374,6 +389,8 @@ var keywords = NewSet(
 	KeywordQueues,
 	KeywordQuota,
 	KeywordRange,
+	KeywordRedis,
+	KeywordRefresh,
 	KeywordReload,
 	KeywordRemove,
 	KeywordRename,

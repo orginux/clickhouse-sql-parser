@@ -4017,28 +4017,144 @@ func (g *GrantPrivilegeExpr) String(level int) string {
 	return builder.String()
 }
 
-// CREATE DICTIONARY id_value_dictionary
-// (
-//     `id` UInt64,
-//     `value` String
-// )
-// PRIMARY KEY id
-// SOURCE(CLICKHOUSE(TABLE 'source_table'))
-// LIFETIME(MIN 0 MAX 1000)
-// LAYOUT(FLAT())
+type DictionarySourceParamExpr struct {
+	ParamName  *Ident
+	EqualsPos  Pos
+	ParamValue Expr
+}
+
+func (d *DictionarySourceParamExpr) Pos() Pos {
+	return d.ParamName.Pos()
+}
+
+func (d *DictionarySourceParamExpr) End() Pos {
+	return d.ParamValue.End()
+}
+
+func (d *DictionarySourceParamExpr) String(level int) string {
+	var builder strings.Builder
+	builder.WriteString(d.ParamName.String(level))
+	builder.WriteByte(' ')
+	builder.WriteString(d.ParamValue.String(level))
+	return builder.String()
+}
+
+type DictionarySourceParamsExpr struct {
+	LeftParenPos  Pos
+	RightParenPos Pos
+	Params        []*DictionarySourceParamExpr
+}
+
+func (d *DictionarySourceParamsExpr) Pos() Pos {
+	return d.LeftParenPos
+}
+
+func (d *DictionarySourceParamsExpr) End() Pos {
+	return d.RightParenPos
+}
+
+func (d *DictionarySourceParamsExpr) String(level int) string {
+	var builder strings.Builder
+	builder.WriteByte('(')
+	for i, param := range d.Params {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(param.String(level))
+	}
+	builder.WriteByte(')')
+	return builder.String()
+}
+
+type DictionarySourceExpr struct {
+	SourcePos  Pos
+	SourceEnd  Pos
+	SourceType string
+	Params     *DictionarySourceParamsExpr
+}
+
+func (d *DictionarySourceExpr) Pos() Pos {
+	return d.SourcePos
+}
+
+func (d *DictionarySourceExpr) End() Pos {
+	return d.Params.End()
+}
+
+func (d *DictionarySourceExpr) String(level int) string {
+	var builder strings.Builder
+	builder.WriteString("SOURCE(")
+	builder.WriteString(d.SourceType)
+	if d.Params != nil {
+		builder.WriteString(d.Params.String(level))
+	}
+	builder.WriteByte(')')
+	return builder.String()
+}
+
+type DictionaryLifetimeExpr struct {
+	LifetimePos Pos
+	Min         *NumberLiteral
+	Max         *NumberLiteral
+}
+
+func (d *DictionaryLifetimeExpr) Pos() Pos {
+	return d.LifetimePos
+}
+
+func (d *DictionaryLifetimeExpr) End() Pos {
+	if d.Max != nil {
+		return d.Max.End()
+	}
+	return d.Min.End()
+}
+
+func (d *DictionaryLifetimeExpr) String(level int) string {
+	var builder strings.Builder
+	builder.WriteString("LIFETIME(")
+	if d.Min != nil {
+		builder.WriteString("MIN ")
+		builder.WriteString(d.Min.String(level))
+	} else {
+		builder.WriteString("MAX ")
+		builder.WriteString(d.Max.String(level))
+	}
+	builder.WriteByte(')')
+	return builder.String()
+}
+
+type CommentExpr struct {
+	CommentPos Pos
+	Comment    *StringLiteral
+}
+
+func (c *CommentExpr) Pos() Pos {
+	return c.CommentPos
+}
+
+func (c *CommentExpr) End() Pos {
+	return c.Comment.End()
+}
+
+func (c *CommentExpr) String(level int) string {
+	var builder strings.Builder
+	builder.WriteString("COMMENT ")
+	builder.WriteString(c.Comment.String(level))
+	return builder.String()
+}
 
 type CreateDictionary struct {
-	CreatePos    Pos // position of CREATE keyword
-	StatementEnd Pos
-	IfNotExists  bool // true if 'IF NOT EXISTS' is specified
-	Name         *Ident
-	OnCluster    *OnClusterExpr   // true if `ON CLUSTER` is specified
-	TableSchema  *TableSchemaExpr // regular table schema
-	PrimaryKey   *PrimaryKeyExpr
-	Source       *StringLiteral
-	Lifetime     *NumberLiteral
-	Settings     *SettingsExprList
-	Comment      *StringLiteral
+	CreatePos    Pos                     // position of CREATE keyword
+	StatementEnd Pos                     // position of statement end
+	IfNotExists  bool                    // true if 'IF NOT EXISTS' is specified
+	Name         *TableIdentifier        // database and table name
+	OnCluster    *OnClusterExpr          // true if `ON CLUSTER` is specified
+	TableSchema  *TableSchemaExpr        // regular table schema
+	PrimaryKey   *PrimaryKeyExpr         // regular table  key
+	Source       *DictionarySourceExpr   // FILE, HTTP, ODBC, MYSQL, CLICKHOUSE, etc.
+	Lifetime     *DictionaryLifetimeExpr // MIN and MAX lifetime
+	Settings     *SettingsExprList       // key-value settings
+	Comment      *StringLiteral          // string literal
 }
 
 func (c *CreateDictionary) Pos() Pos {
@@ -4050,14 +4166,12 @@ func (c *CreateDictionary) End() Pos {
 }
 
 func (c *CreateDictionary) Type() string {
-	return "CREATE DICTIONARY"
+	return "DICTIONARY"
 }
 
 func (c *CreateDictionary) String(level int) string {
 	var builder strings.Builder
-	builder.WriteString("CREATE")
-	// TODO: OR REPLACE
-	builder.WriteString(" DICTIONARY ")
+	builder.WriteString("CREATE DICTIONARY ")
 	if c.IfNotExists {
 		builder.WriteString("IF NOT EXISTS ")
 	}
@@ -4076,13 +4190,20 @@ func (c *CreateDictionary) String(level int) string {
 	}
 	if c.Source != nil {
 		builder.WriteString(NewLine(level))
-		builder.WriteString("SOURCE ")
 		builder.WriteString(c.Source.String(level))
 	}
+
 	if c.Lifetime != nil {
 		builder.WriteString(NewLine(level))
-		builder.WriteString("LIFETIME ")
 		builder.WriteString(c.Lifetime.String(level))
+	}
+	if c.Settings != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString(c.Settings.String(level))
+	}
+	if c.Comment != nil {
+		builder.WriteString(NewLine(level))
+		builder.WriteString(c.Comment.String(level))
 	}
 	return builder.String()
 }

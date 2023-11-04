@@ -1310,76 +1310,93 @@ func (p *Parser) parseCreateFunction(pos Pos) (*CreateFunction, error) {
 	}, nil
 }
 
-func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
-	// parse CREATE
-	createDictionary := &CreateDictionary{CreatePos: pos}
-	if err := p.consumeKeyword(KeywordDictionary); err != nil {
-		return nil, err
-	}
-
-	// try to parse IF NOT EXISTS
-	ifNotExists, err := p.tryParseIfNotExists()
-	if err != nil {
-		return nil, err
-	}
-	createDictionary.IfNotExists = ifNotExists
-
-	// parse dictionary name
-	dictionaryName, err := p.parseIdent()
-	if err != nil {
-		return nil, err
-	}
-	createDictionary.Name = dictionaryName
-
-	// try to parse ON CLUSTER
-	onCluster, err := p.tryParseOnCluster(p.Pos())
-	if err != nil {
-		return nil, err
-	}
-	createDictionary.OnCluster = onCluster
-
-	// parse table schema
-	tableSchema, err := p.parseTableSchemaExpr(p.Pos())
-	if err != nil {
-		return nil, err
-	}
-	createDictionary.TableSchema = tableSchema
-
-	// parse PRIMARY KEY
-	primaryKeyExpr, err := p.tryParsePrimaryKeyExpr(p.Pos())
-	if err != nil {
-		return nil, err
-	}
-	createDictionary.PrimaryKey = primaryKeyExpr
-
-	// parse SOURCE
+func (p *Parser) parseDictionarySourceExpr(pos Pos) (*DictionarySourceExpr, error) {
 	if err := p.consumeKeyword(KeywordSource); err != nil {
 		return nil, err
 	}
-	source, err := p.parseString(p.Pos())
-	if err != nil {
-		return nil, err
-	}
-	createDictionary.Source = source
+	return p.parseDictionarySource(pos)
+}
 
-	// parse LIFETIME
+func (p *Parser) parseDictionarySource(pos Pos) (*DictionarySourceExpr, error) {
+	if p.matchTokenKind("(") {
+		fmt.Println("token kind (")
+	}
+
+	sourceExpr := &DictionarySourceExpr{SourcePos: p.Pos()}
+	var sourceEnd Pos
+	fmt.Println(sourceExpr.SourceType)
+	switch {
+	case p.matchKeyword(KeywordFile):
+		sourceExpr.SourceType = KeywordFile
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordHttp):
+		sourceExpr.SourceType = KeywordHttp
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordOdbc):
+		sourceExpr.SourceType = KeywordOdbc
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordMysql):
+		sourceExpr.SourceType = KeywordMysql
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordClickhouse):
+		sourceExpr.SourceType = KeywordClickhouse
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordPostgresql):
+		sourceExpr.SourceType = KeywordPostgresql
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordMongodb):
+		sourceExpr.SourceType = KeywordMongodb
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	case p.matchKeyword(KeywordRedis):
+		sourceExpr.SourceType = KeywordRedis
+		sourceEnd = p.last().End
+		_ = p.lexer.consumeToken()
+	default:
+		return nil, fmt.Errorf("expected keyword: FILE|HTTP|ODBC|MYSQL|CLICKHOUSE|POSTGRESQL|MONGODB|REDIS|NULL, but got %q", p.last().String)
+	}
+	return &DictionarySourceExpr{
+		SourcePos:  pos,
+		SourceType: sourceExpr.SourceType,
+		SourceEnd:  sourceEnd,
+	}, nil
+}
+
+func (p *Parser) tryParseDictionaryLifetimeExpr(pos Pos) (*DictionaryLifetimeExpr, error) {
+	if !p.matchKeyword(KeywordLifetime) {
+		return nil, nil // nolint
+	}
+	return p.parseDictionaryLifetimeExpr(pos)
+}
+
+func (p *Parser) parseDictionaryLifetimeExpr(pos Pos) (*DictionaryLifetimeExpr, error) {
 	if err := p.consumeKeyword(KeywordLifetime); err != nil {
 		return nil, err
 	}
-	lifetime, err := p.parseNumber(p.Pos())
-	if err != nil {
+	if err := p.consumeKeyword(KeywordMin); err != nil {
 		return nil, err
 	}
-	createDictionary.Lifetime = lifetime
-
-	// parse SETTINGS
-	if err := p.consumeKeyword(KeywordSettings); err != nil {
+	if err := p.consumeKeyword(KeywordMax); err != nil {
 		return nil, err
 	}
-	settings, err := p.parseSettingsExprList(p.Pos())
-	createDictionary.Settings = settings
+	return &DictionaryLifetimeExpr{
+		LifetimePos: pos,
+	}, nil
+}
 
-	// parse COMMENT
+func (p *Parser) tryParseComment(pos Pos) (*CommentExpr, error) {
+	if !p.matchKeyword(KeywordComment) {
+		return nil, nil // nolint
+	}
+	return p.parseComment(pos)
+}
+func (p *Parser) parseComment(pos Pos) (*CommentExpr, error) {
 	if err := p.consumeKeyword(KeywordComment); err != nil {
 		return nil, err
 	}
@@ -1387,7 +1404,63 @@ func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
 	if err != nil {
 		return nil, err
 	}
-	createDictionary.Comment = comment
+	return &CommentExpr{
+		CommentPos: pos,
+		Comment:    comment,
+	}, nil
+}
 
-	return createDictionary, nil
+func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
+	if err := p.consumeKeyword(KeywordDictionary); err != nil {
+		return nil, err
+	}
+	ifNotExists, err := p.tryParseIfNotExists()
+	if err != nil {
+		return nil, err
+	}
+	name, err := p.parseTableIdentifier(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	onCluster, err := p.tryParseOnCluster(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	tableSchema, err := p.parseTableSchemaExpr(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	primaryKey, err := p.tryParsePrimaryKeyExpr(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	source, err := p.parseDictionarySourceExpr(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	lifetime, err := p.tryParseDictionaryLifetimeExpr(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	settings, err := p.tryParseSettingsExprList(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	comment, err := p.tryParseComment(p.Pos())
+	if err != nil {
+		return nil, err
+	}
+	return &CreateDictionary{
+		CreatePos:    pos,
+		StatementEnd: comment.End(),
+		IfNotExists:  ifNotExists,
+		Name:         name,
+		OnCluster:    onCluster,
+		TableSchema:  tableSchema,
+		PrimaryKey:   primaryKey,
+		Source:       source,
+		Lifetime:     lifetime,
+		Settings:     settings,
+		Comment:      comment.Comment,
+	}, nil
 }
