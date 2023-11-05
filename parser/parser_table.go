@@ -1452,7 +1452,6 @@ func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
 	}
 	return &CreateDictionary{
 		CreatePos:    pos,
-		StatementEnd: comment.End(),
 		IfNotExists:  ifNotExists,
 		Name:         name,
 		OnCluster:    onCluster,
@@ -1462,5 +1461,6 @@ func (p *Parser) parseCreateDictionary(pos Pos) (*CreateDictionary, error) {
 		Lifetime:     lifetime,
 		Settings:     settings,
 		Comment:      comment.Comment,
+		StatementEnd: comment.End(),
 	}, nil
 }
